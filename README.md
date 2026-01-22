@@ -20,7 +20,7 @@ A task management application built with Express.js, MongoDB, React, Redux Toolk
 ## Prerequisites
 
 - Node.js 20+
-- MongoDB installed and running locally on port 27017
+- Docker and Docker Compose (for MongoDB)
 
 ## Getting Started
 
@@ -32,11 +32,13 @@ npm run install:all
 
 ### 2. Start MongoDB
 
-Make sure MongoDB is running locally:
+Start MongoDB using Docker Compose:
 
 ```bash
-mongod
+docker-compose up -d
 ```
+
+This will start MongoDB on port 27017 with persistent data storage.
 
 ### 3. Start Development Servers
 
