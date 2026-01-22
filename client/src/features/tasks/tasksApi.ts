@@ -41,6 +41,42 @@ export const tasksApi = createApi({
         { type: 'Task', id },
         { type: 'Task', id: 'LIST' },
       ],
+      async onQueryStarted({ id, updates }, { dispatch, queryFulfilled }) {
+        const optimisticUpdatedAt = new Date().toISOString();
+        const patches: Array<{ undo: () => void }> = [];
+
+        try {
+          patches.push(
+            dispatch(
+              tasksApi.util.updateQueryData('getTasks', undefined, (draft) => {
+                const existing = draft.find((t) => t.id === id);
+                if (!existing) return;
+                Object.assign(existing, updates, { updatedAt: optimisticUpdatedAt });
+              })
+            )
+          );
+        } catch {
+          // If cache entry doesn't exist yet, skip.
+        }
+
+        try {
+          patches.push(
+            dispatch(
+              tasksApi.util.updateQueryData('getTask', id, (draft) => {
+                Object.assign(draft, updates, { updatedAt: optimisticUpdatedAt });
+              })
+            )
+          );
+        } catch {
+          // If cache entry doesn't exist yet, skip.
+        }
+
+        try {
+          await queryFulfilled;
+        } catch {
+          patches.forEach((p) => p.undo());
+        }
+      },
     }),
 
     deleteTask: builder.mutation<{ message: string; id: string }, string>({
