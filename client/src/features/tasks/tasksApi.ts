@@ -42,7 +42,7 @@ export const tasksApi = createApi({
         { type: 'Task', id: 'LIST' },
       ],
       async onQueryStarted({ id, updates }, { dispatch, queryFulfilled }) {
-        const optimisticUpdatedAt = new Date().toISOString();
+        const optimisticUpdatedAt = Math.floor(Date.now() / 1000);
         const patches: Array<{ undo: () => void }> = [];
 
         try {

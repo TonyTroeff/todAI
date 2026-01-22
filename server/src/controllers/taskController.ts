@@ -1,5 +1,50 @@
 import { Request, Response } from 'express';
-import Task, { ITask } from '../models/Task.js';
+import Task, { ITask, TaskStatus } from '../models/Task.js';
+
+type Nullable<T> = T | null;
+
+type CreateTaskBody = {
+  title: string;
+  description?: string;
+  status?: TaskStatus;
+  priority?: Nullable<number>;
+  dueDate?: Nullable<number>; // unix seconds (UTC midnight)
+};
+
+type UpdateTaskBody = {
+  title?: string;
+  description?: string;
+  status?: TaskStatus;
+  priority?: Nullable<number>;
+  dueDate?: Nullable<number>; // unix seconds (UTC midnight)
+};
+
+function isValidPriority(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) >= 1 && (value as number) <= 9;
+}
+
+function parseDueDateUnixSeconds(value: unknown): { ok: true; date: Date } | { ok: false; message: string } {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return { ok: false, message: 'dueDate must be a unix timestamp in seconds' };
+  }
+
+  const ms = value * 1000;
+  const date = new Date(ms);
+  if (!Number.isFinite(date.getTime())) {
+    return { ok: false, message: 'dueDate must be a valid unix timestamp in seconds' };
+  }
+
+  if (
+    date.getUTCHours() !== 0 ||
+    date.getUTCMinutes() !== 0 ||
+    date.getUTCSeconds() !== 0 ||
+    date.getUTCMilliseconds() !== 0
+  ) {
+    return { ok: false, message: 'dueDate must represent UTC midnight (date-only)' };
+  }
+
+  return { ok: true, date };
+}
 
 // @desc    Get all tasks
 // @route   GET /api/tasks
@@ -35,12 +80,29 @@ export const getTaskById = async (req: Request, res: Response): Promise<void> =>
 // @route   POST /api/tasks
 export const createTask = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { title, description, status } = req.body as ITask;
+    const { title, description, status, priority, dueDate } = req.body as CreateTaskBody;
+
+    if (priority !== undefined && priority !== null && !isValidPriority(priority)) {
+      res.status(400).json({ message: 'priority must be an integer between 1 and 9' });
+      return;
+    }
+
+    let dueDateAsDate: Date | undefined;
+    if (dueDate !== undefined && dueDate !== null) {
+      const parsed = parseDueDateUnixSeconds(dueDate);
+      if (!parsed.ok) {
+        res.status(400).json({ message: parsed.message });
+        return;
+      }
+      dueDateAsDate = parsed.date;
+    }
 
     const task = await Task.create({
       title,
-      description,
-      status,
+      description: description ?? '',
+      status: status ?? 'todo',
+      ...(priority !== undefined && priority !== null ? { priority } : {}),
+      ...(dueDateAsDate ? { dueDate: dueDateAsDate } : {}),
     });
 
     res.status(201).json(task);
@@ -58,7 +120,22 @@ export const createTask = async (req: Request, res: Response): Promise<void> => 
 // @route   PUT /api/tasks/:id
 export const updateTask = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { title, description, status } = req.body as Partial<ITask>;
+    const { title, description, status, priority, dueDate } = req.body as UpdateTaskBody;
+
+    if (priority !== undefined && priority !== null && !isValidPriority(priority)) {
+      res.status(400).json({ message: 'priority must be an integer between 1 and 9' });
+      return;
+    }
+
+    let dueDateAsDate: Date | undefined;
+    if (dueDate !== undefined && dueDate !== null) {
+      const parsed = parseDueDateUnixSeconds(dueDate);
+      if (!parsed.ok) {
+        res.status(400).json({ message: parsed.message });
+        return;
+      }
+      dueDateAsDate = parsed.date;
+    }
 
     const task = await Task.findById(req.params.id);
 
@@ -70,6 +147,18 @@ export const updateTask = async (req: Request, res: Response): Promise<void> => 
     if (title !== undefined) task.title = title;
     if (description !== undefined) task.description = description;
     if (status !== undefined) task.status = status;
+
+    if (priority === null) {
+      (task as unknown as ITask).priority = undefined;
+    } else if (priority !== undefined) {
+      (task as unknown as ITask).priority = priority;
+    }
+
+    if (dueDate === null) {
+      (task as unknown as ITask).dueDate = undefined;
+    } else if (dueDate !== undefined) {
+      (task as unknown as ITask).dueDate = dueDateAsDate;
+    }
 
     const updatedTask = await task.save();
     res.json(updatedTask);
