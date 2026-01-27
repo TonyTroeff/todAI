@@ -18,6 +18,10 @@ import { useDeleteTaskMutation, useUpdateTaskMutation } from '@/features/tasks/t
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { getRtkQueryErrorMessage } from '@/utils/rtkQueryError';
+import {
+  formatLocalDateTimeFromUnixSeconds,
+  formatUtcDateFromUnixSeconds,
+} from '@/utils/date';
 
 const statusOptions: Array<{ value: TaskStatus; label: string }> = [
   { value: 'todo', label: 'To do' },
@@ -49,8 +53,18 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
     setStatus(task.status);
   }, [task.status]);
 
-  const createdAt = useMemo(() => new Date(task.createdAt).toLocaleString(), [task.createdAt]);
-  const updatedAt = useMemo(() => new Date(task.updatedAt).toLocaleString(), [task.updatedAt]);
+  const createdAt = useMemo(
+    () => formatLocalDateTimeFromUnixSeconds(task.createdAt),
+    [task.createdAt]
+  );
+  const updatedAt = useMemo(
+    () => formatLocalDateTimeFromUnixSeconds(task.updatedAt),
+    [task.updatedAt]
+  );
+  const dueDate = useMemo(
+    () => (task.dueDate !== undefined ? formatUtcDateFromUnixSeconds(task.dueDate) : null),
+    [task.dueDate]
+  );
 
   const handleStatusChange = async (newStatus: TaskStatus) => {
     const previous = status;
@@ -122,6 +136,16 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
           </Stack>
 
           <Stack spacing={0.5} sx={{ mt: 2 }}>
+            {task.priority !== undefined ? (
+              <Typography variant="caption" color="text.secondary">
+                Priority: {task.priority}
+              </Typography>
+            ) : null}
+            {dueDate ? (
+              <Typography variant="caption" color="text.secondary">
+                Due: {dueDate}
+              </Typography>
+            ) : null}
             <Typography variant="caption" color="text.secondary">
               Created: {createdAt}
             </Typography>

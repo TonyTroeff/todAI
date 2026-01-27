@@ -18,6 +18,10 @@ import type { Task, TaskStatus } from '@/types/task';
 import { useCreateTaskMutation, useUpdateTaskMutation } from '@/features/tasks/tasksApi';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { getRtkQueryErrorMessage } from '@/utils/rtkQueryError';
+import {
+  dateInputFromUnixSecondsUtcMidnight,
+  unixSecondsUtcMidnightFromDateInput,
+} from '@/utils/date';
 
 const TITLE_MAX = 200;
 const DESCRIPTION_MAX = 2000;
@@ -32,6 +36,8 @@ type FieldErrors = {
   title?: string;
   description?: string;
   status?: string;
+  priority?: string;
+  dueDate?: string;
 };
 
 const statusOptions: Array<{ value: TaskStatus; label: string }> = [
@@ -52,6 +58,8 @@ export function TaskForm({ open, onClose, task }: TaskFormProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<TaskStatus>('todo');
+  const [priority, setPriority] = useState('');
+  const [dueDate, setDueDate] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
 
   useEffect(() => {
@@ -63,10 +71,14 @@ export function TaskForm({ open, onClose, task }: TaskFormProps) {
       setTitle(task.title ?? '');
       setDescription(task.description ?? '');
       setStatus(task.status ?? 'todo');
+      setPriority(task.priority !== undefined ? String(task.priority) : '');
+      setDueDate(task.dueDate !== undefined ? dateInputFromUnixSecondsUtcMidnight(task.dueDate) : '');
     } else {
       setTitle('');
       setDescription('');
       setStatus('todo');
+      setPriority('');
+      setDueDate('');
     }
   }, [open, task]);
 
@@ -102,12 +114,38 @@ export function TaskForm({ open, onClose, task }: TaskFormProps) {
       nextErrors.status = 'Invalid status';
     }
 
+    const trimmedPriority = priority.trim();
+    if (trimmedPriority) {
+      const asNumber = Number(trimmedPriority);
+      if (!Number.isInteger(asNumber)) {
+        nextErrors.priority = 'Priority must be an integer';
+      } else if (asNumber < 1 || asNumber > 9) {
+        nextErrors.priority = 'Priority must be between 1 and 9';
+      }
+    }
+
+    if (dueDate.trim()) {
+      try {
+        unixSecondsUtcMidnightFromDateInput(dueDate);
+      } catch {
+        nextErrors.dueDate = 'Due date must be a valid date';
+      }
+    }
+
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
 
   const handleSubmit = async () => {
     if (!validate()) return;
+
+    const priorityValue = priority.trim()
+      ? Number(priority.trim())
+      : null;
+
+    const dueDateValue = dueDate.trim()
+      ? unixSecondsUtcMidnightFromDateInput(dueDate.trim())
+      : null;
 
     try {
       if (task) {
@@ -117,6 +155,8 @@ export function TaskForm({ open, onClose, task }: TaskFormProps) {
             title: title.trim(),
             description: description.trim(),
             status,
+            priority: priorityValue,
+            dueDate: dueDateValue,
           },
         }).unwrap();
 
@@ -126,6 +166,8 @@ export function TaskForm({ open, onClose, task }: TaskFormProps) {
           title: title.trim(),
           description: description.trim(),
           status,
+          priority: priorityValue,
+          dueDate: dueDateValue,
         }).unwrap();
 
         showSuccess('Task created');
@@ -182,6 +224,28 @@ export function TaskForm({ open, onClose, task }: TaskFormProps) {
             </Select>
             {errors.status ? <FormHelperText>{errors.status}</FormHelperText> : null}
           </FormControl>
+
+          <TextField
+            label="Priority (1–9)"
+            value={priority}
+            onChange={(e) => setPriority(e.target.value)}
+            fullWidth
+            type="number"
+            error={Boolean(errors.priority)}
+            helperText={errors.priority ?? 'Optional. 1 is most important, 9 is least important.'}
+            inputProps={{ min: 1, max: 9, step: 1 }}
+          />
+
+          <TextField
+            label="Due date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            fullWidth
+            type="date"
+            error={Boolean(errors.dueDate)}
+            helperText={errors.dueDate ?? 'Optional. Date-only (stored and displayed as UTC date).'}
+            InputLabelProps={{ shrink: true }}
+          />
 
           <Typography variant="body2" color="text.secondary">
             Validation matches the back-end rules (title required, max lengths, and allowed status values).
