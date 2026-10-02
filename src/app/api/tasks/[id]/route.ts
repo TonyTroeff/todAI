@@ -1,6 +1,6 @@
 import { getTaskRepository } from "@/lib/tasks/repository";
 import { parseTaskId } from "@/lib/tasks/schema";
-import { readTaskInput, refreshTaskPages, taskNotFound } from "@/lib/tasks/api";
+import { readTaskCompletion, readTaskInput, refreshTaskPages, taskNotFound } from "@/lib/tasks/api";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,6 +18,18 @@ export async function PUT(request: Request, { params }: Context) {
   const input = await readTaskInput(request);
   if (input.response) return input.response;
   const task = getTaskRepository().update(id, input.data!);
+  if (!task) return taskNotFound();
+  refreshTaskPages();
+  return Response.json(task);
+}
+
+/** Marks a task as completed (`{ "completed": true }`) or reverts it. */
+export async function PATCH(request: Request, { params }: Context) {
+  const id = parseTaskId((await params).id);
+  if (id === null) return taskNotFound();
+  const input = await readTaskCompletion(request);
+  if (input.response) return input.response;
+  const task = getTaskRepository().setCompleted(id, input.data!.completed);
   if (!task) return taskNotFound();
   refreshTaskPages();
   return Response.json(task);

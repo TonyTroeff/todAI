@@ -24,6 +24,7 @@ export function TaskWorkspace({ initialData, initialQuery, initialDialog, home }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [toggling, setToggling] = useState<ReadonlySet<number>>(new Set());
   const firstLoad = useRef(true);
 
   useEffect(() => {
@@ -70,6 +71,32 @@ export function TaskWorkspace({ initialData, initialQuery, initialDialog, home }
     setLoading(true);
   }
 
+  function replaceTask(next: Task) {
+    setData((current) => ({ ...current, tasks: current.tasks.map((item) => (item.id === next.id ? next : item)) }));
+  }
+
+  /** Optimistically flips completion, reverting if the server rejects it. */
+  async function toggleCompleted(task: Task) {
+    const completed = !task.completed;
+    setError("");
+    setToggling((ids) => new Set(ids).add(task.id));
+    replaceTask({ ...task, completed });
+    try {
+      const response = await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ completed }),
+      });
+      if (!response.ok) throw new Error("Unable to update the task. Please try again.");
+      replaceTask(await response.json());
+    } catch (failure) {
+      replaceTask(task);
+      setError(failure instanceof Error ? failure.message : "Unable to update the task.");
+    } finally {
+      setToggling((ids) => { const next = new Set(ids); next.delete(task.id); return next; });
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -107,9 +134,20 @@ export function TaskWorkspace({ initialData, initialQuery, initialDialog, home }
         ) : (
           <ul className="space-y-2">
             {data.tasks.map((task) => (
-              <li key={task.id} className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 shadow-sm sm:flex-row sm:items-center">
+              <li key={task.id} data-completed={task.completed} className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 shadow-sm sm:flex-row sm:items-center">
+                <button
+                  type="button"
+                  aria-pressed={task.completed}
+                  aria-label={`Mark ${task.title} as completed`}
+                  title={task.completed ? "Mark as not completed" : "Mark as completed"}
+                  disabled={toggling.has(task.id)}
+                  onClick={() => toggleCompleted(task)}
+                  className={`shrink-0 self-start rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-60 sm:self-center ${task.completed ? "text-success" : "text-muted hover:text-success"}`}
+                >
+                  <CheckCircleIcon filled={task.completed} />
+                </button>
                 <button className="min-w-0 flex-1 rounded text-left focus-visible:outline-2 focus-visible:outline-accent" onClick={() => setDialog({ mode: "view", task })}>
-                  <h2 className="truncate font-medium hover:text-accent">{task.title}</h2>
+                  <h2 className={`truncate font-medium hover:text-accent ${task.completed ? "text-muted line-through" : ""}`}>{task.title}</h2>
                   {task.description && <p className="mt-1 line-clamp-2 break-words text-sm text-muted">{task.description}</p>}
                   <p className="mt-2 text-xs text-muted">Priority {task.priority}{task.dueDate && <> · Due <time dateTime={task.dueDate}>{task.dueDate}</time></>}</p>
                   <p className="mt-2 text-xs text-muted">Updated <LocalTime iso={task.updatedAt} /></p>
@@ -130,5 +168,24 @@ export function TaskWorkspace({ initialData, initialQuery, initialDialog, home }
       </section>
       {dialog && <TaskDialog key={dialog.mode + ("task" in dialog ? dialog.task.id : "")} state={dialog} onClose={closeDialog} onChange={setDialog} onSaved={saved} />}
     </div>
+  );
+}
+
+/** Circled tick; outlined when open, solid when completed. */
+function CheckCircleIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="size-7">
+      {filled ? (
+        <>
+          <circle cx="12" cy="12" r="10" fill="currentColor" />
+          <path d="m7.5 12.5 3 3 6-6.5" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </>
+      ) : (
+        <>
+          <circle cx="12" cy="12" r="9.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
+          <path d="m7.5 12.5 3 3 6-6.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </>
+      )}
+    </svg>
   );
 }

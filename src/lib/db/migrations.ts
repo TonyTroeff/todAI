@@ -29,6 +29,11 @@ const migrations: readonly string[] = [
     CHECK (typeof(priority) = 'integer' AND priority BETWEEN 1 AND 4);
   ALTER TABLE tasks ADD COLUMN due_date TEXT;
   `,
+  // v3 — completion flag
+  `
+  ALTER TABLE tasks ADD COLUMN completed INTEGER NOT NULL DEFAULT 0
+    CHECK (completed IN (0, 1));
+  `,
 ];
 
 /**

@@ -9,6 +9,7 @@ interface TaskRow {
   description: string;
   priority: number;
   due_date: string | null;
+  completed: 0 | 1;
   created_at: string;
   updated_at: string;
 }
@@ -26,7 +27,7 @@ export interface TaskPage {
   total: number;
 }
 
-const COLUMNS = "id, title, description, priority, due_date, created_at, updated_at";
+const COLUMNS = "id, title, description, priority, due_date, completed, created_at, updated_at";
 const SEARCH_CLAUSE =
   "WHERE title LIKE @pattern ESCAPE '\\' OR description LIKE @pattern ESCAPE '\\'";
 
@@ -37,6 +38,7 @@ function toTask(row: TaskRow): Task {
     description: row.description,
     priority: row.priority,
     dueDate: row.due_date,
+    completed: row.completed === 1,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -91,6 +93,10 @@ export function createTaskRepository(db: Database.Database) {
        WHERE id = @id
        RETURNING ${COLUMNS}`,
     ),
+    // Completion does not touch updated_at, so toggling keeps the list order stable.
+    setCompleted: db.prepare<{ id: number; completed: number }, TaskRow>(
+      `UPDATE tasks SET completed = @completed WHERE id = @id RETURNING ${COLUMNS}`,
+    ),
     delete: db.prepare<[number]>("DELETE FROM tasks WHERE id = ?"),
   };
 
@@ -138,6 +144,15 @@ export function createTaskRepository(db: Database.Database) {
     update(id: number, input: TaskInput): Task | null {
       const data = taskInputSchema.parse(input);
       const row = statements.update.get({ id, ...data });
+      return row ? toTask(row) : null;
+    },
+
+    /**
+     * Marks a task as completed or not completed.
+     * Returns `null` if no task with that id exists.
+     */
+    setCompleted(id: number, completed: boolean): Task | null {
+      const row = statements.setCompleted.get({ id, completed: completed ? 1 : 0 });
       return row ? toTask(row) : null;
     },
 

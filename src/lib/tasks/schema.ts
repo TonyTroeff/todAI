@@ -11,6 +11,7 @@ export interface Task {
   priority: number;
   /** Calendar date (YYYY-MM-DD), without a time or time zone. */
   dueDate: string | null;
+  completed: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -38,6 +39,11 @@ export const taskInputSchema = z.object({
 });
 
 export type TaskInput = z.input<typeof taskInputSchema>;
+
+/** Body accepted when marking a task as completed or not completed. */
+export const taskCompletionSchema = z.object({
+  completed: z.boolean("Completed must be true or false."),
+});
 
 /** Parses a route segment such as `/tasks/[id]` into a positive integer id. */
 export function parseTaskId(raw: string): number | null {

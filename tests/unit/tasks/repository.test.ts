@@ -67,12 +67,14 @@ describe("task repository", () => {
     runMigrations(db);
     runMigrations(db);
     expect(db.prepare("SELECT * FROM tasks WHERE id = 1").get())
-      .toEqual({ ...before as object, priority: 3, due_date: null });
+      .toEqual({ ...before as object, priority: 3, due_date: null, completed: 0 });
     const migratedRepo = createTaskRepository(db);
     expect(migratedRepo.get(1)).toMatchObject({ title: "Existing task", priority: 3, dueDate: null });
     expect(migratedRepo.update(1, { title: "Existing task", priority: 4, dueDate: "2026-12-01" }))
       .toMatchObject({ priority: 4, dueDate: "2026-12-01" });
     expect(() => db.prepare("UPDATE tasks SET priority = 1.5 WHERE id = 1").run()).toThrow();
+    expect(migratedRepo.get(1)?.completed).toBe(false);
+    expect(() => db.prepare("UPDATE tasks SET completed = 2 WHERE id = 1").run()).toThrow();
   });
 
   it("creates and reads a task, trimming input", () => {
@@ -100,6 +102,19 @@ describe("task repository", () => {
     expect(updated).toMatchObject({ id: task.id, title: "New", description: "Details" });
     expect(updated!.createdAt).toBe(task.createdAt);
     expect(updated!.updatedAt > task.updatedAt).toBe(true);
+  });
+
+  it("marks a task completed and back without reordering or editing it", () => {
+    const task = repo.create({ title: "Toggle me" });
+    expect(task.completed).toBe(false);
+
+    const completed = repo.setCompleted(task.id, true);
+    expect(completed).toEqual({ ...task, completed: true });
+    expect(repo.get(task.id)).toEqual(completed);
+    expect(repo.update(task.id, { title: "Renamed" })?.completed).toBe(true);
+
+    expect(repo.setCompleted(task.id, false)?.completed).toBe(false);
+    expect(repo.setCompleted(999, true)).toBeNull();
   });
 
   it("returns null/false for missing tasks", () => {

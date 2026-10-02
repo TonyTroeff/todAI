@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openDatabase } from "@/lib/db/connection";
 import { createTaskRepository, type TaskRepository } from "@/lib/tasks/repository";
 import { GET as list, POST } from "@/app/api/tasks/route";
-import { GET, PUT, DELETE } from "@/app/api/tasks/[id]/route";
+import { GET, PUT, PATCH, DELETE } from "@/app/api/tasks/[id]/route";
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/server", () => ({ connection: vi.fn(async () => {}) }));
@@ -87,6 +87,23 @@ describe("task API", () => {
     expect(invalidUpdate.status).toBe(400);
     expect((await invalidUpdate.json()).errors.title).toContain("Title is required.");
     expect(repo.get(task.id)?.title).toBe("Keep me");
+  });
+
+  it("toggles completion and rejects invalid completion bodies", async () => {
+    const task = repo.create({ title: "Finish me" });
+    const done = await PATCH(request("PATCH", { completed: true }), context(task.id));
+    expect(done.status).toBe(200);
+    expect(await done.json()).toEqual({ ...task, completed: true });
+    const undone = await PATCH(request("PATCH", { completed: false }), context(task.id));
+    expect(await undone.json()).toMatchObject({ completed: false });
+    for (const body of [{}, { completed: "true" }, { completed: 1 }, { completed: null }, null]) {
+      const response = await PATCH(request("PATCH", body), context(task.id));
+      expect(response.status).toBe(400);
+    }
+    expect(repo.get(task.id)).toEqual(task);
+    for (const id of ["0", "abc", 999]) {
+      expect((await PATCH(request("PATCH", { completed: true }), context(id))).status).toBe(404);
+    }
   });
 
   it("returns 404 for invalid IDs and missing reads/updates", async () => {

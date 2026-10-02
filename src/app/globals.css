@@ -19,6 +19,7 @@
   --danger: #dc2626;
   --danger-hover: #b91c1c;
   --danger-soft: #fdf0ec;
+  --success: #16a34a;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -36,6 +37,7 @@
     --danger: #f87171;
     --danger-hover: #fca5a5;
     --danger-soft: #421c14;
+    --success: #4ade80;
   }
 }
 
@@ -53,6 +55,7 @@
   --color-danger: var(--danger);
   --color-danger-hover: var(--danger-hover);
   --color-danger-soft: var(--danger-soft);
+  --color-success: var(--success);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
