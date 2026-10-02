@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { buttonClasses } from "@/components/ui/button";
 import { NavLink } from "./NavLink";
 
 /**
@@ -23,17 +22,8 @@ export function SiteHeader() {
         </Link>
 
         <nav aria-label="Main" className="flex items-center gap-1">
-          <NavLink href="/" exact>
-            Home
-          </NavLink>
           <NavLink href="/tasks">Tasks</NavLink>
         </nav>
-
-        <Link href="/tasks/new" className={buttonClasses("primary", "px-3 py-1.5")}>
-          <span aria-hidden className="text-base leading-none">+</span>
-          <span className="hidden sm:inline">New task</span>
-          <span className="sr-only sm:hidden">New task</span>
-        </Link>
       </div>
     </header>
   );
