@@ -25,6 +25,41 @@ const request = (method: string, body?: unknown) => new Request("http://localhos
 });
 
 describe("task API", () => {
+  it("defaults missing fields, persists optional values, and clears the due date", async () => {
+    const minimal = await (await POST(request("POST", { title: "Minimal" }))).json();
+    expect(minimal).toMatchObject({ priority: 3, dueDate: null });
+    const created = await POST(request("POST", { title: "Scheduled", priority: 1, dueDate: "2026-11-12" }));
+    expect(created.status).toBe(201);
+    const task = await created.json();
+    expect(await (await GET(request("GET"), context(task.id))).json())
+      .toMatchObject({ priority: 1, dueDate: "2026-11-12" });
+    const updated = await PUT(request("PUT", { title: "Scheduled", priority: 4, dueDate: "2026-12-01" }), context(task.id));
+    expect(updated.status).toBe(200);
+    expect(await updated.json()).toMatchObject({ priority: 4, dueDate: "2026-12-01" });
+    const cleared = await PUT(request("PUT", { title: "Scheduled", dueDate: null }), context(task.id));
+    expect(cleared.status).toBe(200);
+    expect(await cleared.json()).toMatchObject({ priority: 3, dueDate: null });
+    expect(repo.get(task.id)).toMatchObject({ priority: 3, dueDate: null });
+  });
+
+  it("rejects invalid optional fields on create and edit without modifying tasks", async () => {
+    const task = repo.create({ title: "Keep me", priority: 2, dueDate: "2026-11-12" });
+    for (const fields of [
+      { priority: 0 }, { priority: 5 }, { priority: 1.5 }, { priority: "1" }, { priority: null },
+      { dueDate: "2026-02-30" }, { dueDate: "2026-02-29" }, { dueDate: "" }, { dueDate: 123 },
+    ]) {
+      const field = "priority" in fields ? "priority" : "dueDate";
+      const created = await POST(request("POST", { title: "Invalid", ...fields }));
+      expect(created.status).toBe(400);
+      expect((await created.json()).errors[field]).toBeDefined();
+      const updated = await PUT(request("PUT", { title: "Changed", ...fields }), context(task.id));
+      expect(updated.status).toBe(400);
+      expect((await updated.json()).errors[field]).toBeDefined();
+      expect(repo.get(task.id)).toEqual(task);
+    }
+    expect(repo.count()).toBe(1);
+  });
+
   it("creates, reads, updates and deletes a persisted task", async () => {
     const created = await POST(request("POST", { title: "  Buy milk  " }));
     expect(created.status).toBe(201);

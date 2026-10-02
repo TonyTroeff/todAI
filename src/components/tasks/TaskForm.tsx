@@ -13,7 +13,7 @@ interface TaskFormProps {
   /** Server action that handles the submission (create, or update bound to an id). */
   action: TaskFormAction;
   /** Initial field values (for editing). */
-  defaultValues?: { title: string; description: string };
+  defaultValues?: { title: string; description: string; priority?: number; dueDate?: string | null };
   submitLabel: string;
   pendingLabel: string;
   /** Where the Cancel link goes. */
@@ -40,7 +40,7 @@ export function TaskForm({
   cancelHref,
 }: TaskFormProps) {
   const [state, formAction] = useActionState(action, {});
-  const values = state.values ?? defaultValues ?? { title: "", description: "" };
+  const values = state.values ?? defaultValues ?? { title: "", description: "", priority: 3, dueDate: null };
 
   // Tracked only for the character counters; inputs stay uncontrolled.
   // (React resets the form after a submission to `defaultValue`, which is
@@ -108,6 +108,20 @@ export function TaskForm({
         />
       </Field>
 
+      <Field id="priority" label="Priority" optional errors={state.errors?.priority}>
+        <select id="priority" name="priority" defaultValue={values.priority ?? 3}
+          aria-invalid={!!state.errors?.priority} aria-describedby={state.errors?.priority ? "priority-error" : undefined} className={inputClasses}>
+          <option value="1">1 — Most important</option>
+          <option value="2">2</option>
+          <option value="3">3 — Default</option>
+          <option value="4">4 — Least important</option>
+        </select>
+      </Field>
+      <Field id="due-date" label="Due date" optional errors={state.errors?.dueDate}>
+        <input id="due-date" name="dueDate" type="date" defaultValue={values.dueDate ?? ""}
+          aria-invalid={!!state.errors?.dueDate} aria-describedby={state.errors?.dueDate ? "due-date-error" : undefined} className={inputClasses} />
+      </Field>
+
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Link href={cancelHref} className={buttonClasses("secondary")}>
           Cancel
@@ -122,8 +136,8 @@ interface FieldProps {
   id: string;
   label: string;
   optional?: boolean;
-  count: number;
-  max: number;
+  count?: number;
+  max?: number;
   errors?: string[];
   children: React.ReactNode;
 }
@@ -137,11 +151,11 @@ function Field({ id, label, optional, count, max, errors, children }: FieldProps
           {label}
           {optional && <span className="ml-1 font-normal text-muted">(optional)</span>}
         </label>
-        <span
+        {count !== undefined && max !== undefined && <span
           className={`text-xs tabular-nums ${count > max * 0.9 ? "text-danger" : "text-muted"}`}
         >
           {count}/{max}
-        </span>
+        </span>}
       </div>
       {children}
       {errors && errors.length > 0 && (

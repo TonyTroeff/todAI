@@ -9,6 +9,8 @@ export function task(overrides: Partial<Task> = {}): Task {
     id: 42,
     title: "Buy groceries",
     description: "Milk and bread",
+    priority: 3,
+    dueDate: null,
     createdAt: "2026-10-02T08:00:00.000Z",
     updatedAt: "2026-10-02T09:00:00.000Z",
     ...overrides,

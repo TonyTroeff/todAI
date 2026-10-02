@@ -8,6 +8,9 @@ export interface Task {
   id: number;
   title: string;
   description: string;
+  priority: number;
+  /** Calendar date (YYYY-MM-DD), without a time or time zone. */
+  dueDate: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -30,9 +33,11 @@ export const taskInputSchema = z.object({
       `Description must be at most ${DESCRIPTION_MAX_LENGTH} characters.`,
     )
     .default(""),
+  priority: z.number().int().min(1).max(4).default(3),
+  dueDate: z.iso.date("Provide a valid due date (YYYY-MM-DD).").nullable().default(null),
 });
 
-export type TaskInput = z.infer<typeof taskInputSchema>;
+export type TaskInput = z.input<typeof taskInputSchema>;
 
 /** Parses a route segment such as `/tasks/[id]` into a positive integer id. */
 export function parseTaskId(raw: string): number | null {

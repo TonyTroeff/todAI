@@ -19,6 +19,7 @@ export function TaskCard({ task }: { task: Task }) {
         {task.description && (
           <p className="mt-1 line-clamp-2 break-words text-sm text-muted">{task.description}</p>
         )}
+        <p className="mt-2 text-xs text-muted">Priority {task.priority}{task.dueDate && <> · Due <time dateTime={task.dueDate}>{task.dueDate}</time></>}</p>
       </Link>
     </li>
   );

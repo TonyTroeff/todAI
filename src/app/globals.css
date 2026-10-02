@@ -6,36 +6,36 @@
  * including dark mode — is controlled from this one place.
  */
 :root {
-  --background: #f6f7f9;
-  --foreground: #16181d;
-  --surface: #ffffff;
-  --surface-hover: #f1f3f6;
-  --border: #e2e5ea;
-  --muted: #5d6573;
-  --accent: #4f46e5;
-  --accent-hover: #4338ca;
+  --background: #fdf7ee;
+  --foreground: #3b2a1c;
+  --surface: #fffdf8;
+  --surface-hover: #f9efdd;
+  --border: #eadfc8;
+  --muted: #8b7260;
+  --accent: #c2410c;
+  --accent-hover: #9a3412;
   --accent-foreground: #ffffff;
-  --accent-soft: #eef0ff;
+  --accent-soft: #ffedd5;
   --danger: #dc2626;
   --danger-hover: #b91c1c;
-  --danger-soft: #fef2f2;
+  --danger-soft: #fdf0ec;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0e1014;
-    --foreground: #e8eaee;
-    --surface: #171a20;
-    --surface-hover: #1f232b;
-    --border: #2a2f39;
-    --muted: #9aa3b2;
-    --accent: #818cf8;
-    --accent-hover: #a5b4fc;
-    --accent-foreground: #0e1014;
-    --accent-soft: #1e2140;
+    --background: #1e1611;
+    --foreground: #f3e7d3;
+    --surface: #291e15;
+    --surface-hover: #34261a;
+    --border: #4c3722;
+    --muted: #c0a384;
+    --accent: #fb923c;
+    --accent-hover: #fdba74;
+    --accent-foreground: #2a1503;
+    --accent-soft: #4a2a13;
     --danger: #f87171;
     --danger-hover: #fca5a5;
-    --danger-soft: #2a1515;
+    --danger-soft: #421c14;
   }
 }
 

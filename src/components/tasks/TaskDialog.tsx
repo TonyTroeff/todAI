@@ -21,9 +21,11 @@ export function TaskDialog({ state, onClose, onChange, onSaved }: {
   const task = "task" in state ? state.task : null;
   const [title, setTitle] = useState(task?.title ?? "");
   const [description, setDescription] = useState(task?.description ?? "");
+  const [priority, setPriority] = useState(task?.priority ?? 3);
+  const [dueDate, setDueDate] = useState(task?.dueDate ?? "");
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
-  const [errors, setErrors] = useState<{ title?: string[]; description?: string[] }>({});
+  const [errors, setErrors] = useState<{ title?: string[]; description?: string[]; priority?: string[]; dueDate?: string[] }>({});
   const heading = { new: "New task", edit: "Edit task", delete: "Delete task?", view: "Task details" }[state.mode];
 
   useEffect(() => {
@@ -53,7 +55,12 @@ export function TaskDialog({ state, onClose, onChange, onSaved }: {
       const response = await fetch(task ? `/api/tasks/${task.id}` : "/api/tasks", {
         method: state.mode === "delete" ? "DELETE" : task ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        ...(state.mode === "delete" ? {} : { body: JSON.stringify({ title, description }) }),
+        ...(state.mode === "delete" ? {} : { body: JSON.stringify({
+          title, description,
+          // Default values may be omitted; include populated fields on every edit.
+          ...(priority !== 3 ? { priority } : {}),
+          ...(dueDate || task?.dueDate ? { dueDate: dueDate || null } : {}),
+        }) }),
       });
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
@@ -86,6 +93,8 @@ export function TaskDialog({ state, onClose, onChange, onSaved }: {
           <h3 className="break-words text-2xl font-semibold">{task.title}</h3>
           <p className="whitespace-pre-wrap break-words text-muted">{task.description || "No description."}</p>
           <dl className="space-y-2 border-t border-border pt-4 text-sm">
+            <div><dt className="text-muted">Priority</dt><dd>{task.priority}{task.priority === 1 ? " (most important)" : ""}</dd></div>
+            <div><dt className="text-muted">Due date</dt><dd>{task.dueDate ? <time dateTime={task.dueDate}>{task.dueDate}</time> : "No due date."}</dd></div>
             <div><dt className="text-muted">Created</dt><dd><LocalTime iso={task.createdAt} /></dd></div>
             <div><dt className="text-muted">Last updated</dt><dd><LocalTime iso={task.updatedAt} /></dd></div>
           </dl>
@@ -112,6 +121,27 @@ export function TaskDialog({ state, onClose, onChange, onSaved }: {
                 <textarea id="task-description" name="description" rows={8} maxLength={DESCRIPTION_MAX_LENGTH} value={description} disabled={pending} placeholder="Add more details…"
                   aria-invalid={!!errors.description} aria-describedby={errors.description ? "task-description-error" : undefined} onChange={(event) => setDescription(event.target.value)} className={`${inputClasses} resize-y`} />
                 {errors.description && <p id="task-description-error" className="text-sm text-danger">{errors.description.join(" ")}</p>}
+              </div>
+              <div className="grid gap-5 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label htmlFor="task-priority" className="text-sm font-medium">Priority <span className="font-normal text-muted">(optional)</span></label>
+                  <select id="task-priority" name="priority" value={priority} disabled={pending}
+                    aria-invalid={!!errors.priority} aria-describedby={errors.priority ? "task-priority-error" : undefined}
+                    onChange={(event) => setPriority(Number(event.target.value))} className={inputClasses}>
+                    <option value="1">1 — Most important</option>
+                    <option value="2">2</option>
+                    <option value="3">3 — Default</option>
+                    <option value="4">4 — Least important</option>
+                  </select>
+                  {errors.priority && <p id="task-priority-error" className="text-sm text-danger">{errors.priority.join(" ")}</p>}
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="task-due-date" className="text-sm font-medium">Due date <span className="font-normal text-muted">(optional)</span></label>
+                  <input id="task-due-date" name="dueDate" type="date" value={dueDate} disabled={pending}
+                    aria-invalid={!!errors.dueDate} aria-describedby={errors.dueDate ? "task-due-date-error" : undefined}
+                    onChange={(event) => setDueDate(event.target.value)} className={inputClasses} />
+                  {errors.dueDate && <p id="task-due-date-error" className="text-sm text-danger">{errors.dueDate.join(" ")}</p>}
+                </div>
               </div>
             </>
           )}

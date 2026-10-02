@@ -12,11 +12,11 @@ import { taskInputSchema } from "./schema";
  */
 export interface TaskFormState {
   /** Field-level validation messages. */
-  errors?: { title?: string[]; description?: string[] };
+  errors?: { title?: string[]; description?: string[]; priority?: string[]; dueDate?: string[] };
   /** Form-level error (e.g. the task was deleted meanwhile). */
   message?: string;
   /** Submitted values, used to repopulate the form after an error. */
-  values?: { title: string; description: string };
+  values?: { title: string; description: string; priority: string; dueDate: string };
 }
 
 /** Extracts and validates task fields from submitted form data. */
@@ -24,8 +24,14 @@ function parseTaskForm(formData: FormData) {
   const values = {
     title: String(formData.get("title") ?? ""),
     description: String(formData.get("description") ?? ""),
+    priority: String(formData.get("priority") ?? "3"),
+    dueDate: String(formData.get("dueDate") ?? ""),
   };
-  const result = taskInputSchema.safeParse(values);
+  const result = taskInputSchema.safeParse({
+    ...values,
+    priority: values.priority === "" ? undefined : Number(values.priority),
+    dueDate: values.dueDate || null,
+  });
   return { values, result };
 }
 

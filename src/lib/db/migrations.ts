@@ -23,6 +23,12 @@ const migrations: readonly string[] = [
   );
   CREATE INDEX idx_tasks_updated_at ON tasks (updated_at DESC, id DESC);
   `,
+  // v2 — optional task priority and calendar due date
+  `
+  ALTER TABLE tasks ADD COLUMN priority INTEGER NOT NULL DEFAULT 3
+    CHECK (typeof(priority) = 'integer' AND priority BETWEEN 1 AND 4);
+  ALTER TABLE tasks ADD COLUMN due_date TEXT;
+  `,
 ];
 
 /**

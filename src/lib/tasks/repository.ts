@@ -7,6 +7,8 @@ interface TaskRow {
   id: number;
   title: string;
   description: string;
+  priority: number;
+  due_date: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -24,7 +26,7 @@ export interface TaskPage {
   total: number;
 }
 
-const COLUMNS = "id, title, description, created_at, updated_at";
+const COLUMNS = "id, title, description, priority, due_date, created_at, updated_at";
 const SEARCH_CLAUSE =
   "WHERE title LIKE @pattern ESCAPE '\\' OR description LIKE @pattern ESCAPE '\\'";
 
@@ -33,6 +35,8 @@ function toTask(row: TaskRow): Task {
     id: row.id,
     title: row.title,
     description: row.description,
+    priority: row.priority,
+    dueDate: row.due_date,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -72,16 +76,17 @@ export function createTaskRepository(db: Database.Database) {
     get: db.prepare<[number], TaskRow>(
       `SELECT ${COLUMNS} FROM tasks WHERE id = ?`,
     ),
-    insert: db.prepare<{ title: string; description: string }, TaskRow>(
-      `INSERT INTO tasks (title, description) VALUES (@title, @description)
+    insert: db.prepare<{ title: string; description: string; priority: number; dueDate: string | null }, TaskRow>(
+      `INSERT INTO tasks (title, description, priority, due_date) VALUES (@title, @description, @priority, @dueDate)
        RETURNING ${COLUMNS}`,
     ),
     update: db.prepare<
-      { id: number; title: string; description: string },
+      { id: number; title: string; description: string; priority: number; dueDate: string | null },
       TaskRow
     >(
       `UPDATE tasks
        SET title = @title, description = @description,
+           priority = @priority, due_date = @dueDate,
            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
        WHERE id = @id
        RETURNING ${COLUMNS}`,

@@ -2,6 +2,7 @@ import type Database from "better-sqlite3";
 import { ZodError } from "zod";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { openDatabase } from "@/lib/db/connection";
+import { runMigrations } from "@/lib/db/migrations";
 import { createTaskRepository, type TaskRepository } from "@/lib/tasks/repository";
 import { parseTaskId } from "@/lib/tasks/schema";
 
@@ -18,6 +19,62 @@ afterEach(() => {
 });
 
 describe("task repository", () => {
+  it("defaults optional fields and persists every priority and due date", () => {
+    const minimal = repo.create({ title: "Minimal" });
+    expect(repo.get(minimal.id)).toMatchObject({ priority: 3, dueDate: null, description: "" });
+    for (const priority of [1, 2, 3, 4]) {
+      const task = repo.create({ title: `Priority ${priority}`, priority, dueDate: "2028-02-29" });
+      expect(repo.get(task.id)).toEqual(task);
+      expect(task).toMatchObject({ priority, dueDate: "2028-02-29" });
+      expect(repo.list({ limit: 10, offset: 0 }).tasks).toContainEqual(task);
+      expect(repo.update(task.id, { title: task.title, priority: 2, dueDate: "2026-12-01" }))
+        .toMatchObject({ priority: 2, dueDate: "2026-12-01" });
+      expect(repo.update(task.id, { title: task.title, priority: 3, dueDate: null }))
+        .toMatchObject({ priority: 3, dueDate: null });
+    }
+  });
+
+  it("rejects out-of-range and fractional priorities and invalid calendar dates", () => {
+    for (const priority of [0, 5, -1, 1.5, NaN, Infinity]) {
+      expect(() => repo.create({ title: "Invalid priority", priority })).toThrow(ZodError);
+    }
+    for (const dueDate of ["", "tomorrow", "2026-02-29", "2026-02-30", "2026-13-01", "2026-1-1", "2026-10-02T00:00:00Z"]) {
+      expect(() => repo.create({ title: "Invalid date", dueDate })).toThrow(ZodError);
+    }
+    expect(repo.count()).toBe(0);
+    const task = repo.create({ title: "Keep me", priority: 1, dueDate: "2026-11-12" });
+    expect(() => repo.update(task.id, { title: "Changed", priority: 5 })).toThrow(ZodError);
+    expect(() => repo.update(task.id, { title: "Changed", dueDate: "2026-02-30" })).toThrow(ZodError);
+    expect(repo.get(task.id)).toEqual(task);
+  });
+
+  it("upgrades existing tasks with defaults without losing data", () => {
+    // Recreate the shipped v1 schema and a row before applying the new migration.
+    db.exec(`
+      DROP TABLE tasks;
+      CREATE TABLE tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL CHECK (length(title) BETWEEN 1 AND 200),
+        description TEXT NOT NULL DEFAULT '' CHECK (length(description) <= 5000),
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+        updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+      );
+      CREATE INDEX idx_tasks_updated_at ON tasks (updated_at DESC, id DESC);
+      INSERT INTO tasks (title, description) VALUES ('Existing task', 'Keep details');
+      PRAGMA user_version = 1;
+    `);
+    const before = db.prepare("SELECT * FROM tasks WHERE id = 1").get();
+    runMigrations(db);
+    runMigrations(db);
+    expect(db.prepare("SELECT * FROM tasks WHERE id = 1").get())
+      .toEqual({ ...before as object, priority: 3, due_date: null });
+    const migratedRepo = createTaskRepository(db);
+    expect(migratedRepo.get(1)).toMatchObject({ title: "Existing task", priority: 3, dueDate: null });
+    expect(migratedRepo.update(1, { title: "Existing task", priority: 4, dueDate: "2026-12-01" }))
+      .toMatchObject({ priority: 4, dueDate: "2026-12-01" });
+    expect(() => db.prepare("UPDATE tasks SET priority = 1.5 WHERE id = 1").run()).toThrow();
+  });
+
   it("creates and reads a task, trimming input", () => {
     const created = repo.create({ title: "  Buy milk  ", description: " 2 litres " });
 

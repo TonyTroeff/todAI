@@ -111,6 +111,7 @@ export function TaskWorkspace({ initialData, initialQuery, initialDialog, home }
                 <button className="min-w-0 flex-1 rounded text-left focus-visible:outline-2 focus-visible:outline-accent" onClick={() => setDialog({ mode: "view", task })}>
                   <h2 className="truncate font-medium hover:text-accent">{task.title}</h2>
                   {task.description && <p className="mt-1 line-clamp-2 break-words text-sm text-muted">{task.description}</p>}
+                  <p className="mt-2 text-xs text-muted">Priority {task.priority}{task.dueDate && <> · Due <time dateTime={task.dueDate}>{task.dueDate}</time></>}</p>
                   <p className="mt-2 text-xs text-muted">Updated <LocalTime iso={task.updatedAt} /></p>
                 </button>
                 <div className="flex shrink-0 gap-1">
