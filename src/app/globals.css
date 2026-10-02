@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. Components use the Tailwind utilities generated from these
+ * (e.g. `bg-surface`, `text-muted`, `border-border`), so the whole theme —
+ * including dark mode — is controlled from this one place.
+ */
+:root {
+  --background: #f6f7f9;
+  --foreground: #16181d;
+  --surface: #ffffff;
+  --surface-hover: #f1f3f6;
+  --border: #e2e5ea;
+  --muted: #5d6573;
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-foreground: #ffffff;
+  --accent-soft: #eef0ff;
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
+  --danger-soft: #fef2f2;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0e1014;
+    --foreground: #e8eaee;
+    --surface: #171a20;
+    --surface-hover: #1f232b;
+    --border: #2a2f39;
+    --muted: #9aa3b2;
+    --accent: #818cf8;
+    --accent-hover: #a5b4fc;
+    --accent-foreground: #0e1014;
+    --accent-soft: #1e2140;
+    --danger: #f87171;
+    --danger-hover: #fca5a5;
+    --danger-soft: #2a1515;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-soft: var(--danger-soft);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
