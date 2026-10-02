@@ -20,7 +20,32 @@ The database is created automatically at `data/todai.db` (git-ignored). Set `TOD
 | `npm run lint` | ESLint |
 | `npm run typecheck` | TypeScript checks |
 | `npm test` | Repository and API tests |
+| `npm run test:component` | Headless Cypress component tests |
+| `npm run test:component:open` | Interactive Cypress component tests |
 | `npm run seed -- 1000` | Insert sample tasks |
+
+## Testing
+
+All tests and Cypress infrastructure live under `tests/`:
+
+- `tests/component/tasks/`: independent create, edit and delete component specs.
+- `tests/support/`: React mounting helpers, fresh task factories, production styles and an API guard.
+- `tests/unit/tasks/`: existing repository and API tests using a fresh in-memory database per test.
+- `tests/cypress.config.mjs`: component-only Cypress configuration with a Vite React dev server.
+
+Component tests mount `TaskWorkspace` directly, including its real task dialogs. They require no running Next.js server, database, login or seed command. Each test gets a fresh mount and mocks its own mutation and list-refresh requests with `cy.intercept()`. Unexpected `/api/**` calls fail immediately. Cypress resets component/browser state, intercepts and aliases between tests; edit/delete tests start with task props rather than relying on a previous create test.
+
+Vite bundles just the imported client components. Tests use the real Tailwind CSS, wait on request aliases and retryable assertions, and avoid fixed sleeps. Video recording and test retries are disabled; headless runs retain no completed tests in memory. Failure screenshots go to the ignored `tests/artifacts/` directory.
+
+```bash
+npm run test:component
+npm run test:component:open
+npm run test:component -- --spec tests/component/tasks/edit.cy.tsx
+npm test
+npm run typecheck
+```
+
+`npm test` runs only the unit/API suite. Cypress specs use their own TypeScript project so Cypress/Chai globals do not conflict with Vitest. To add a component test, create a `.cy.tsx` spec under `tests/component/`, mount fresh props and explicitly stub every expected API request before triggering it. The Cypress browser binary downloads during `npm install`; if installation skipped scripts, run `npx cypress install` once before running component tests.
 
 ## Task workspace
 

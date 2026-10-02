@@ -1,0 +1,11 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["cypress", "node"],
+    "jsx": "react-jsx",
+    "incremental": false,
+    "plugins": []
+  },
+  "include": ["component/**/*.tsx", "support/**/*.ts", "support/**/*.tsx"],
+  "exclude": ["../node_modules"]
+}

@@ -1,15 +1,15 @@
 import type Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openDatabase } from "@/lib/db/connection";
-import { createTaskRepository, type TaskRepository } from "./repository";
+import { createTaskRepository, type TaskRepository } from "@/lib/tasks/repository";
 import { GET as list, POST } from "@/app/api/tasks/route";
 import { GET, PUT, DELETE } from "@/app/api/tasks/[id]/route";
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/server", () => ({ connection: vi.fn(async () => {}) }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("./repository", async (importOriginal) => ({
-  ...await importOriginal<typeof import("./repository")>(),
+vi.mock("@/lib/tasks/repository", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/tasks/repository")>(),
   getTaskRepository: () => repo,
 }));
 

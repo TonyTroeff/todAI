@@ -2,8 +2,8 @@ import type Database from "better-sqlite3";
 import { ZodError } from "zod";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { openDatabase } from "@/lib/db/connection";
-import { createTaskRepository, type TaskRepository } from "./repository";
-import { parseTaskId } from "./schema";
+import { createTaskRepository, type TaskRepository } from "@/lib/tasks/repository";
+import { parseTaskId } from "@/lib/tasks/schema";
 
 let db: Database.Database;
 let repo: TaskRepository;
